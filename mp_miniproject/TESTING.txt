@@ -1,0 +1,254 @@
+
+FILE SPECIFICATOIN:
+1) file.txt -- a large file (1M) used to test pipe in step4.
+2) rein.txt -- served as STDIN in redirection in step4.
+3) reout.txt -- served as STDOUT in redirection in step4.
+4) hello.cpp -- read input from stdin and print it to stdout, take command line arguments and print them out to stdout.
+5) target.cpp -- the same as hello.cpp.
+
+NOTE: Line2 in this text means "Program exited with status 0".
+
+******************************************************
+*                       Step 1:                      *
+******************************************************
+
+----------   execute child process  ------------
+
+(1) Run ./hello zhimin chang
+    You will see that it prints zhimin|chang, and after
+    the program exits, it prints "Program exited with status 0",
+    which is correct because the hello program was written to
+    receive the commandline arguments and print all of them
+    with '|' between two arguments.
+    And I used waitpid() function to wait for the child process
+    to terminate with the appropriate massages printed out.
+(2) Run ./hello
+    Type hello + Enter
+    Press Ctrl+D
+    You will see that it prints "hello" and "Program exited with status 0",
+    which is correct because the program prints what it reads from stdin to
+    stdout.
+
+----------  exit baby command shell  ----------
+
+(3) Run exit  OR  Ctrl+D
+    You will see the shell exits,which is correct because
+    when the comman "exit" or EOF is encountered, the program
+    jump out of the infinite loop and return successfully.
+
+******************************************************
+*                       Step 2:                      *
+******************************************************
+
+-----------  path name without / in it  ------------
+
+(1) Run ls
+    You will see that it prints all the files and directories
+    in the current working directory, which is correct because
+    command "ls" does not have a / in it, so the program
+    searches each directory specified in the PATH for "ls" program,
+    sinc it is contained in /bin, it will work and print
+    corresponding contents.
+(2) Run hello
+    You will see that it prints "Command hello not found",
+    which is correct because "hello" isn't contained
+    in any directories specified in PATH, so it cannot be found.
+
+------------   path name with / in it   --------------
+
+(3) Run ./hello          a         b        123
+    You will see that it prints a|b|123, which is correct because program hello
+    takes in command line arguments and prints them out with "|" between each other.
+    This testcase is written to show that relative path of the program can work well.
+(4) Run /bin/ls
+    You will see that it prints all the files and directories in the current working directory. This testcase
+    is written to show that by typing absolute path of the program, the shell can also work well.
+
+------------   escaped spaces considered   -----------
+
+(5) Run ./hello    a\ b\ cd 123 \ ece
+    You will see that it prints a b cd|123| ece (Line1),
+    Program exited with status 0 (Line2), which is correct because
+    the white space escaped with \ has been parsed to be literally included in the argument.
+
+(6) Run ./hello \\  a b
+    You will see that it prints \ |a|b (Line1),
+    Program exited with status 0 (Line2), which is correct because the second "\" along with the space is
+    considered as an escaped space. While the first backslash is considered as a normal backslash.
+
+(7) Run ./hello a   \    c\ d
+    You will see that it prints a| |c d (Line1),
+    Program exited with status 0 (Line2), which is correct
+    because the escaped space served as a space argument.
+
+******************************************************
+*                       Step 3:                      *
+******************************************************
+=======================
+(1) Run the baby shell
+    You will see it prints myShell:/home/zc86/ece551/mp_miniproject $,
+    which is correct because the program uses getcwd() function
+    to retrieve cwd and prints the prompt with current directory before the $.
+
+--------      cd     ----------
+
+(2) Run cd ..
+    You will see that it prints myShell:/home/zc86/ece551 $,
+    which is correct because the command cd change the current
+    working directory to the directory specified in the commandline argument.
+    Run cd ./mini_project
+    You will see that it prints myShell:/home/zc86/ece551/mini_project $.
+(3) Run cd ../hello
+    You will see that it prints "Error: No such file or directory", which is correct
+    because hello does not exist in the /home/zc86/ece551 directory.
+
+--------   $varname   ---------
+
+(3) Run echo $PATH
+    You will see that it prints
+    /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games (line1)
+    Program exited with status 0 (Line2), which is correct
+    because echo is contained in /bin directory in PATH which
+    can be found, and $PATH has been replaced with the value of the variable PATH.
+
+(4) Run ./hello $PATH 123
+    Press Ctrl+D
+    You will see that it prints /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games|123 (Line1)
+    Program exited with status 0. (Line2)
+    It's correct because $PATH has been replaced by its current value.
+
+(5) Run ./hello $abc 123 $HOME
+    Press Ctrl+D
+    You will see that it prints $abc|123|/home/zc86 (Line1),
+    Program exited with status 0. (Line2), which is correct because "abc" has
+    not been included as an environment variable.
+
+----------   built-in command   ---------
+    ----  set  ------
+(6) Run set PATH /bin
+    Run echo $PATH
+    Run env
+    For the second command, you will see that it
+    prints
+    /bin (line1)
+    Program exited with status 0 (line2);
+    For the third command, it prints "Command env not found".
+    This is correct because the set command set the variable PATH to /bin, so
+    the second command prints only /bin instead of the original value.
+    Since PATH has been changed to /bin, and program env resides in /usr/bin, so
+    the third command will print Command env not found.
+(7) Run set A hello
+    Run env
+    You will not see the A environment variable in the list, which is correct
+    because so far A has not been placed in the environment for other programs, that is, it has not been exported.
+    -----   export ------
+(8) Run export A
+    Run env
+    You will see A=hello is included in the environment list, which is correct because
+    the third argument envp in the execve() function has contained A variable now, so
+    other programs have access to this entry.
+
+(9) Run set A
+    Run env
+    You will see A= is included in the environment list.
+    The reason is the same as the above.
+
+(10) Run export SOME VARIABLE NOT BEEN SET
+     You will see it prints "Variable not found", which is correct because
+     the variable specified to export does not show in the environment list, so
+     we should prompt some message to inform the user.
+
+=========================
+(11)Run set A $PATH
+    Run export A
+    Run env
+    You will see that A=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games
+    is included in the environment list, which is correct
+    because $PATH, the value of variable A has been parsed to its
+    real value, that is, the set of directories delimited by the colon signs.
+    So after exporting A and run env command, A equals to the value of PATH.
+    Run set A 123\ 45
+    Run export A
+    Run env
+    You will see that the value of A has been changed to "123\ 45", which is correct
+    because every time we set a variable that has been existed, its original value will be replaced with the new value.
+=========================
+(12) Run set A hello
+     Run set B world
+     Run export A B
+     You will see that it prints the existing enviroment list along with A=hello and B=world plus Line2, which
+     is correct because I set two environment variables first and export them at once, so they both
+     appear in the list. Besides, more than two variables can also work.
+=========================
+(13) Run set  OR  Run export
+     The program do nothing, which is correct because
+     the user did not input something meaningful.
+=========================
+
+******************************************************
+*                       Step 4:                      *
+******************************************************
+
+-------------     redirection    ---------------
+
+(1) Run ./hello < rein.txt
+    You will see that it prints the content in the file rein.txt plus Line2, which is correct
+    because the execute_cmd() checks the redirection and redirects the stdin to the specified file.
+=========================
+(2) Run ./hello > reout.txt
+    Input "hello" in STDIN, press Cltr+D
+    You will see the string "hello" is written to the file reout.txt plus Line2, which
+    is correct because STDOUT has been redirected to the file reout.txt.
+=========================
+(3) Run ./hello < rein.txt > reout.txt
+    You will see the reout.txt now contains the same content as rein.txt plus Line2, which is correct
+    because stdin has been redirected to file rein.txt, and stdout has been redirected to
+    file reout.txt.
+(4) Run ./hello > reout.txt < rein.txt
+    You will see the result is the same as the above command, which is correct because it
+    just reverses the position of redirection.
+=========================
+(5) Run ./hello a b\ c d < rein.txt e f
+    You will see the content of rein.txt followed by a|b c|d|e|f printed out on the screen plus Line2, which is correct
+    because the program parse the escaped spaces at the beginning, replace it
+    with normal spaces, and the commandline arguments after the file name are also considered.
+
+----------------     pipe      --------------------
+
+(6) Run ./hello < rein.txt | ./target > reout.txt
+    You will see the content in rein.txt has been piped to reout.txt plus Line2, which is correct because
+    for the first command, STDIN has been redirected to rein.txt, and
+    its STDOUT is redirected into the write end of the pipeline.
+    For the second command, STDIN has been redirected to the read end of the pipeline and STDOUT has been redirected to reout.txt.
+=========================
+(7) Run ls | ./hello > out.txt
+    You will see that it prints all the files and directories reside
+    in current directory to the file called out.txt plus Line2, which is newly created
+    since it does not exist at the beginning.
+    And when we run cat out.txt, we will see the content output by command ls in it.
+=========================
+(8) Run ls | cat
+    You will see all the files and directories reside in current directory
+    has been printed out line by line plus Line2, which is correct because
+    the output of command "ls" has been sent to command cat as its arguments.
+=========================
+(9) Run ./hello a\ b c d < rein.txt | ./target 23\ 45 > reout.txt zhimin
+    You will see that the content in rein.txt has been piped to reout.txt followed by the command line
+    arguments in both command1 (a b|c|d) and command2 (23 45|zhimin) plus Line2, which is correct because
+    the whole command has mixed the functionalities in this step with step1 and step2.
+=========================
+(10) Run ./hello < file.txt | ./target > reout.txt
+     You will see that all the contents in file.txt has been
+     piped to reout.txt. I use command "dd if=/dev/zero of=file.txt count=1024 bs=1024" to
+     generate a large file which in this case the size of file.txt is 1M. It turns out
+     the pipe works just fine without deadlock.
+=========================
+(11) Run ./hello < rein.txt | cat | ./hello a\ b c | ./hello > reout.txt
+     You will see the content in reout.txt contains the content of rein.txt plus
+     the arguments listed in the third command as a b|c, plus the last line as "Program
+     exited with status 0". This result indicates that the pipe has been built correctly
+     and it works well with all the functionalities accomplished in the previous steps.
+=========================
+(12) Run ./hello < rein.txt | hello | ./target > reout.txt
+     You will see that it prints Command hello not found, which is correct because the
+     second command "hello" cannot be found in the directories specified in PATH.

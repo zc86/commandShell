@@ -1,0 +1,2 @@
+myShell: myShell.cpp *.h
+        g++ -std=gnu++03 -pedantic -Wall -Werror -o myShell myShell.cpp
